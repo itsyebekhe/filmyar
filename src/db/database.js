@@ -131,19 +131,29 @@ export async function getMovieById(db, movieId, env) {
   if (row) {
     let parsed = {};
     try { parsed = JSON.parse(row.links); } catch {}
-    return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleanUpLinksObject(parsed)];
+    const cleaned = cleanUpLinksObject(parsed);
+    if (hasDownloadLinks(cleaned)) {
+      return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleaned];
+    }
   }
 
-  // Scrape if not present
+  // Missing or empty links: scrape live sources
   const tmdbKey = env?.TMDB_API_KEY;
   const botName = env?.BOT_USERNAME;
   if (!tmdbKey) return null;
 
   const scraped = await scrapeMovieByImdbId(movieId, tmdbKey, botName);
-  if (scraped) {
+  if (scraped && hasDownloadLinks(scraped.links)) {
     await dbAddCustom(db, scraped);
-    return [scraped.imdbId, scraped.type, scraped.title_en, scraped.title_fa, scraped.year, scraped.rating, 0, scraped.links];
+    return [scraped.imdbId, scraped.type, scraped.title_en, scraped.title_fa, scraped.year, scraped.rating, row ? row.views : 0, scraped.links];
   }
+
+  if (row) {
+    let parsed = {};
+    try { parsed = JSON.parse(row.links); } catch {}
+    return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleanUpLinksObject(parsed)];
+  }
+
   return null;
 }
 
