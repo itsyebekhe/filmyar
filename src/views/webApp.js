@@ -1264,10 +1264,10 @@ export function renderWebApp(botUsername, tmdbKey) {
         }
 
         async function checkInitialDeepLink() {
-            const hash = window.location.hash || '';
-            const match = hash.match(/#\/?(tt\d+)/i);
-            if (match && match[1]) {
-                const imdbId = match[1];
+            const rawHash = (window.location.hash || '').replace(/^#\/?/, '').trim();
+            const match = rawHash.match(/tt[0-9]+/i);
+            if (match && match[0]) {
+                const imdbId = match[0].toLowerCase();
                 try {
                     const res = await fetch('/api/get?id=' + imdbId);
                     const item = await res.json();
