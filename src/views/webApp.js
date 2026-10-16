@@ -1,4 +1,4 @@
-function getWebAppHTML(botUsername, tmdbKey) {
+export function renderWebApp(botUsername, tmdbKey) {
   return `<!DOCTYPE html>
 <html lang="fa" dir="rtl" class="dark">
 <head>
@@ -133,9 +133,7 @@ function getWebAppHTML(botUsername, tmdbKey) {
                         <p class="text-[10px] text-zinc-400">محبوب‌ترین عناوین از نگاه کاربران</p>
                     </div>
                 </div>
-                <div id="slider-top10" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x">
-                    <!-- Dynamic Cards -->
-                </div>
+                <div id="slider-top10" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x"></div>
             </section>
 
             <!-- Trending Media -->
@@ -147,9 +145,7 @@ function getWebAppHTML(botUsername, tmdbKey) {
                     </div>
                     <button onclick="switchView('movies')" class="text-xs font-bold text-brand-500 active:underline">بیشتر ❯</button>
                 </div>
-                <div id="slider-trending" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x">
-                    <!-- Dynamic Cards -->
-                </div>
+                <div id="slider-trending" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x"></div>
             </section>
 
             <!-- Random Discovery -->
@@ -163,9 +159,7 @@ function getWebAppHTML(botUsername, tmdbKey) {
                         <span>تازه‌سازی</span> ⟳
                     </button>
                 </div>
-                <div id="slider-random" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x">
-                    <!-- Dynamic Cards -->
-                </div>
+                <div id="slider-random" class="flex gap-3 overflow-x-auto hide-scroll pb-2 snap-x"></div>
             </section>
         </div>
 
@@ -274,32 +268,26 @@ function getWebAppHTML(botUsername, tmdbKey) {
 
                 <!-- Tab 2: Redesigned Download Center -->
                 <div id="modal-content-dl" class="hidden space-y-4 pt-2">
-                    
-                    <!-- Loading Skeleton -->
                     <div id="modal-dl-loading" class="flex flex-col items-center justify-center py-12 gap-3">
                         <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
                         <p class="text-xs text-zinc-400 font-medium">در حال واکشی لینک‌های پرسرعت...</p>
                     </div>
 
-                    <!-- Dynamic Controls: Audio/Version Switcher -->
                     <div id="dl-version-container" class="hidden">
                         <div class="text-[11px] font-bold text-zinc-400 mb-2">انتخاب نسخه صوتی / ترجمه:</div>
                         <div id="dl-version-pills" class="flex gap-2 overflow-x-auto hide-scroll pb-1"></div>
                     </div>
 
-                    <!-- Dynamic Controls: Season Switcher (Series Only) -->
                     <div id="dl-season-container" class="hidden">
                         <div class="text-[11px] font-bold text-zinc-400 mb-2">انتخاب فصل:</div>
                         <div id="dl-season-pills" class="flex gap-2 overflow-x-auto hide-scroll pb-1"></div>
                     </div>
 
-                    <!-- Dynamic Controls: Quality Filter (Series Only) -->
                     <div id="dl-quality-container" class="hidden">
                         <div class="text-[11px] font-bold text-zinc-400 mb-2">انتخاب کیفیت:</div>
                         <div id="dl-quality-pills" class="flex gap-2 overflow-x-auto hide-scroll pb-1"></div>
                     </div>
 
-                    <!-- Content Stream (Movie Cards or Series Episode Grid) -->
                     <div id="modal-dl-tree" class="space-y-2.5 pb-6"></div>
                 </div>
             </div>
@@ -583,7 +571,6 @@ function getWebAppHTML(botUsername, tmdbKey) {
             loader.style.display = 'none';
         }
 
-        // Infinite Scroll Observer
         const sentinelObserver = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && currentTab !== 'home') {
                 loadGridNextPage();
@@ -591,7 +578,6 @@ function getWebAppHTML(botUsername, tmdbKey) {
         }, { rootMargin: '300px' });
         sentinelObserver.observe(document.getElementById('grid-sentinel'));
 
-        // Modal Functionality
         async function openModal(imdbId, title, year, rating, type) {
             triggerHaptic('light');
             selectedMovie = { id: imdbId, title, year, rating, type };
@@ -617,7 +603,6 @@ function getWebAppHTML(botUsername, tmdbKey) {
             switchModalTab('desc');
             updateBookmarkIcon();
 
-            // Load Rich Info
             try {
                 const cached = TMDB_MEM_CACHE.get(imdbId);
                 if (cached?.plot) {
@@ -820,7 +805,6 @@ function getWebAppHTML(botUsername, tmdbKey) {
         function renderSeriesController(seasonsObj) {
             const seasons = Object.keys(seasonsObj);
             const sPills = document.getElementById('dl-season-pills');
-            const qContainer = document.getElementById('dl-quality-container');
 
             if (seasons.length === 0) {
                 document.getElementById('modal-dl-tree').innerHTML = '<div class="text-center text-zinc-500 py-8 text-xs font-medium">فصلی برای این نسخه یافت نشد.</div>';
@@ -1032,7 +1016,6 @@ function getWebAppHTML(botUsername, tmdbKey) {
             showToast('حافظه کش پاک شد', '🧹');
         }
 
-        // Initialize App
         loadHomeSliders();
     </script>
 </body>
