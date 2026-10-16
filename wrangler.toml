@@ -1,0 +1,10 @@
+name = "filmyar"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Binding: Notice database_id is filled with a dummy placeholder or injected at CI time
+[[d1_databases]]
+binding = "DB"
+database_name = "filmyar_db"
+database_id = "D1_DATABASE_ID_PLACEHOLDER"
