@@ -143,8 +143,8 @@ function extractFileMetadata(filename, path) {
   let season = "Season 1";
   const seasonMatch = 
     path.match(/Season[._\-\s]*(\d+)/i) || 
-    filename.match(/Season[._\-\s]*(\d+)/i) ||
-    path.match(/[\/\._\-\s]S(\d+)/i) ||
+    filename.match(/Season[._\-\s]*(\d+)/i) || 
+    path.match(/[\/\._\-\s]S(\d+)/i) || 
     filename.match(/S(\d+)/i);
 
   if (seasonMatch) season = `Season ${parseInt(seasonMatch[1], 10)}`;
@@ -274,3 +274,25 @@ function mapFilesToLinks(serverFiles, f2mFiles, mediaType, imdbId, botUsername) 
                 quality: qName,
                 number_of_episodes: episodes.length.toString(),
                 avg_episode_size: 350 * 1024 * 1024,
+                folder: `https://t.me/${botUsername}?start=ep_${imdbId}_${ver}_${sNum}_${makeSafeParam(qName)}`,
+                episodes: []
+              };
+              links[ver][sNum].push(existingGroup);
+            }
+
+            for (const ep of episodes) {
+              if (!existingGroup.episodes.some(e => e.url === ep.url)) {
+                existingGroup.episodes.push({ name: ep.name, url: ep.url, size: ep.size });
+              }
+            }
+            existingGroup.number_of_episodes = existingGroup.episodes.length.toString();
+          }
+        }
+      }
+    };
+    addSeries(serverFiles);
+    addSeries(f2mFiles);
+  }
+
+  return links;
+}
