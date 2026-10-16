@@ -1264,7 +1264,7 @@ export function renderWebApp(botUsername, tmdbKey) {
         }
 
         async function checkInitialDeepLink() {
-            const rawHash = (window.location.hash || '').replace(/^#\/?/, '').trim();
+            const rawHash = (window.location.hash || '').replace('#/', '').replace('#', '').trim();
             const match = rawHash.match(/tt[0-9]+/i);
             if (match && match[0]) {
                 const imdbId = match[0].toLowerCase();
