@@ -1,0 +1,46 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build & Deploy
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # 🔒 Safely replace database_id in wrangler.toml during CI run only
+      - name: Inject D1 Database ID
+        run: |
+          sed -i 's/D1_DATABASE_ID_PLACEHOLDER/${{ secrets.D1_DATABASE_ID }}/g' wrangler.toml
+
+      # 🚀 Deploy worker and pass secrets
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            BOT_TOKEN
+            TMDB_API_KEY
+            BOT_USERNAME
+            ADMIN_CHAT_ID
+            REQUEST_GROUP_ID
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          REQUEST_GROUP_ID: ${{ secrets.REQUEST_GROUP_ID }}
