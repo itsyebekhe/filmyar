@@ -18,6 +18,14 @@ jobs:
         with:
           node-version: 20
 
+      # Change 'npm ci' to 'npm install'
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Inject D1 Database ID
+        run: |
+          sed -i 's/D1_DATABASE_ID_PLACEHOLDER/${{ secrets.D1_DATABASE_ID }}/g' wrangler.toml
+
       - name: Install Dependencies
         run: npm ci
 
