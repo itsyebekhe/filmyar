@@ -67,18 +67,6 @@ export function renderWebApp(botUsername, tmdbKey) {
         0% { background-position: -200% 0; }
         100% { background-position: 200% 0; }
       }
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      .line-clamp-3 {
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
     </style>
 </head>
 <body class="selection:bg-brand-500 selection:text-white font-sans antialiased text-sm pb-28">
@@ -99,7 +87,6 @@ export function renderWebApp(botUsername, tmdbKey) {
             <button onclick="triggerHaptic('light'); switchView('search')" class="p-2 rounded-xl bg-dark-800 border border-dark-border text-zinc-300 active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </button>
-            <!-- User Profile / Telegram Login Action -->
             <button id="btn-user-auth" onclick="handleAuthButtonClick()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-800 border border-dark-border text-xs text-zinc-300 hover:text-white active:scale-95 transition-all">
                 <span id="user-avatar-badge">👤</span>
                 <span id="user-name-badge" class="font-bold">ورود</span>
@@ -199,7 +186,7 @@ export function renderWebApp(botUsername, tmdbKey) {
         <!-- View: Grid List (Used for Movies, Series, Favorites & Search) -->
         <div id="view-grid" class="hidden px-4 space-y-4">
             
-            <!-- Search Bar (Activated in Search View) -->
+            <!-- Search Bar -->
             <div id="search-container" class="hidden relative">
                 <div class="relative flex items-center">
                     <input type="text" id="searchInput" oninput="onSearchInput(this.value)" placeholder="نام فیلم یا سریال را بنویسید..." class="w-full bg-dark-800 border border-dark-border rounded-2xl py-3 px-4 pr-11 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-brand-500/50 transition-colors shadow-inner">
@@ -227,7 +214,7 @@ export function renderWebApp(botUsername, tmdbKey) {
         </div>
     </main>
 
-    <!-- Bottom Navigation Bar (Glass Floating Island) -->
+    <!-- Bottom Navigation Bar -->
     <div class="fixed bottom-0 inset-x-0 z-40 p-3 pointer-events-none safe-bottom">
         <nav class="glass-nav rounded-3xl p-1.5 flex items-center justify-around pointer-events-auto max-w-md mx-auto shadow-2xl">
             <button onclick="triggerHaptic('selection'); switchView('home')" id="nav-home" class="flex flex-col items-center gap-1 flex-1 py-1.5 rounded-2xl text-brand-500 transition-colors">
@@ -258,25 +245,21 @@ export function renderWebApp(botUsername, tmdbKey) {
     
     <div id="bottom-sheet" class="fixed inset-x-0 bottom-0 z-50 bg-dark-900 border-t border-dark-border rounded-t-3xl max-h-[92vh] flex flex-col transform translate-y-full transition-transform duration-300 ease-out shadow-sheet overflow-hidden">
         
-        <!-- Drag Handle Indicator -->
         <div class="h-1.5 w-12 bg-zinc-700 rounded-full mx-auto my-3 flex-shrink-0"></div>
         <button onclick="closeModal()" class="absolute top-4 left-4 z-20 w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-zinc-300 active:scale-90">✕</button>
 
         <div class="overflow-y-auto hide-scroll flex-1 pb-16">
-            <!-- Sheet Backdrop Header -->
             <div class="relative w-full aspect-video bg-dark-800 overflow-hidden">
                 <img id="modal-img-backdrop" class="w-full h-full object-cover opacity-0 transition-opacity duration-500">
                 <div class="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/40 to-transparent"></div>
             </div>
 
-            <!-- Movie Metadata Section -->
             <div class="px-5 -mt-12 relative z-10 space-y-4">
                 <div>
                     <h2 id="modal-title" class="text-2xl font-black text-white leading-tight">در حال بارگذاری...</h2>
                     <div id="modal-meta-badges" class="flex flex-wrap items-center gap-2 mt-2 text-xs text-zinc-400 font-medium"></div>
                 </div>
 
-                <!-- Primary Action Buttons -->
                 <div class="flex items-center gap-3">
                     <button onclick="triggerHaptic('medium'); requestInTelegram()" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-98 transition-transform">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
@@ -287,19 +270,16 @@ export function renderWebApp(botUsername, tmdbKey) {
                     </button>
                 </div>
 
-                <!-- Tabs: Synopsis / Downloads -->
                 <div class="flex border-b border-dark-border gap-6 pt-2">
                     <button id="modal-tab-desc" onclick="switchModalTab('desc')" class="pb-2.5 text-xs font-bold text-brand-500 border-b-2 border-brand-500 transition-colors">داستان و عوامل</button>
                     <button id="modal-tab-dl" onclick="switchModalTab('dl')" class="pb-2.5 text-xs font-semibold text-zinc-400 transition-colors">📥 لینک‌های مستقیم دانلود</button>
                 </div>
 
-                <!-- Tab 1: Story Details -->
                 <div id="modal-content-desc" class="space-y-3 pt-1">
                     <p id="modal-plot" class="text-xs text-zinc-300 leading-relaxed font-light"></p>
                     <div id="modal-cast-container" class="text-xs text-zinc-400"></div>
                 </div>
 
-                <!-- Tab 2: Redesigned Download Center -->
                 <div id="modal-content-dl" class="hidden space-y-4 pt-2">
                     <div id="modal-dl-loading" class="flex flex-col items-center justify-center py-12 gap-3">
                         <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
@@ -344,7 +324,16 @@ export function renderWebApp(botUsername, tmdbKey) {
         const tmdbApiKey = '${tmdbKey}';
         const botName = '${botUsername}';
 
-        // Unified User Session Manager (Inside Telegram or Standalone Browser)
+        let currentTab = 'home';
+        let currentPage = 1;
+        let isFetching = false;
+        let endReached = false;
+        let searchTimer = null;
+        let activeQuery = '';
+        let heroItem = null;
+        let selectedMovie = { id: null, title: '', year: '', rating: '', type: 'movie' };
+        let bookmarkedSet = new Set();
+
         let currentUser = null;
         try {
             currentUser = JSON.parse(localStorage.getItem('filmyar_user') || 'null');
@@ -361,6 +350,15 @@ export function renderWebApp(botUsername, tmdbKey) {
         }
 
         let userId = currentUser?.id || '';
+
+        const TMDB_MEM_CACHE = {
+            get: (key) => {
+                try { return JSON.parse(localStorage.getItem('tmdb_' + key)); } catch(e) { return null; }
+            },
+            set: (key, val) => {
+                try { localStorage.setItem('tmdb_' + key, JSON.stringify({ ...(TMDB_MEM_CACHE.get(key) || {}), ...val })); } catch(e) {}
+            }
+        };
 
         function renderAuthBadge() {
             const avatarBadge = document.getElementById('user-avatar-badge');
@@ -436,27 +434,6 @@ export function renderWebApp(botUsername, tmdbKey) {
                 } catch(e) {}
             }, 1800);
         }
-
-        renderAuthBadge();
-
-        let currentTab = 'home';
-        let currentPage = 1;
-        let isFetching = false;
-        let endReached = false;
-        let searchTimer = null;
-        let activeQuery = '';
-        let heroItem = null;
-        let selectedMovie = { id: null, title: '', year: '', rating: '', type: 'movie' };
-        let bookmarkedSet = new Set();
-
-        const TMDB_MEM_CACHE = {
-            get: (key) => {
-                try { return JSON.parse(localStorage.getItem('tmdb_' + key)); } catch(e) { return null; }
-            },
-            set: (key, val) => {
-                try { localStorage.setItem('tmdb_' + key, JSON.stringify({ ...(TMDB_MEM_CACHE.get(key) || {}), ...val })); } catch(e) {}
-            }
-        };
 
         function triggerHaptic(type = 'light') {
             try {
@@ -672,9 +649,6 @@ export function renderWebApp(botUsername, tmdbKey) {
             if (currentTab === 'search') {
                 endpoint = 'search';
                 params += \`&q=\${encodeURIComponent(activeQuery)}\`;
-            if (currentTab === 'search') {
-                endpoint = 'search';
-                params += \`&q=\${encodeURIComponent(activeQuery)}\`;
             } else if (currentTab === 'favs') {
                 if (!userId) {
                     isFetching = false;
@@ -728,7 +702,6 @@ export function renderWebApp(botUsername, tmdbKey) {
             triggerHaptic('light');
             selectedMovie = { id: imdbId, title, year, rating, type };
 
-            // Record history only if user is logged in (guests can browse & download freely)
             if (userId) {
                 fetch(\`/api/history_add?uid=\${userId}&mid=\${imdbId}\`).catch(() => {});
             }
@@ -1127,7 +1100,8 @@ export function renderWebApp(botUsername, tmdbKey) {
 
         async function toggleBookmarkModal() {
             if (!userId) {
-                showToast('شناسه کاربری نامعتبر است', '⚠️');
+                showToast('برای ذخیره در لیست علاقه‌مندی‌ها وارد شوید', '🔒');
+                openAuthModal();
                 return;
             }
             triggerHaptic('medium');
@@ -1158,7 +1132,6 @@ export function renderWebApp(botUsername, tmdbKey) {
             if (!selectedMovie.id) return;
             triggerHaptic('medium');
             tg.openTelegramLink(\`https://t.me/\${botName}?start=\${selectedMovie.id}\`);
-            tg.close();
         }
 
         function clearCacheApp() {
@@ -1167,6 +1140,7 @@ export function renderWebApp(botUsername, tmdbKey) {
             showToast('حافظه کش پاک شد', '🧹');
         }
 
+        renderAuthBadge();
         loadHomeSliders();
     </script>
 </body>
