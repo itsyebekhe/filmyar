@@ -255,6 +255,23 @@ async function renderMovieCard(movieId, chatId, msgId, env, ctx) {
   }
 }
 
+async function editOrReplaceMessage(token, chatId, msgId, payload) {
+  if (msgId) {
+    const res = await sendTelegram('editMessageText', token, {
+      chat_id: chatId,
+      message_id: msgId,
+      ...payload
+    });
+    if (res?.ok) return res;
+    // When editing a photo message, editMessageText fails. Delete and send fresh.
+    await sendTelegram('deleteMessage', token, { chat_id: chatId, message_id: msgId }).catch(() => {});
+  }
+  return sendTelegram('sendMessage', token, {
+    chat_id: chatId,
+    ...payload
+  });
+}
+
 async function renderVersionDownloads(movieId, verKey, chatId, msgId, env) {
   const item = await getMovieById(env.DB, movieId, env);
   if (!item) return;
@@ -298,9 +315,7 @@ async function renderVersionDownloads(movieId, verKey, chatId, msgId, env) {
     { text: '🏠 منوی اصلی', callback_data: 'home' }
   ]);
 
-  await sendTelegram('editMessageText', env.BOT_TOKEN, {
-    chat_id: chatId,
-    message_id: msgId,
+  await editOrReplaceMessage(env.BOT_TOKEN, chatId, msgId, {
     text: `🎬 <b>${title}</b>\n🏷 <b>${vName}</b>\n━━━━━━━━━━━━━━━━━━━━\n👇 کیفیت یا فصل مورد نظر را انتخاب کنید:`,
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard }
@@ -336,9 +351,7 @@ async function renderQualityLinks(movieId, verKey, qIdx, chatId, msgId, env) {
     { text: '🏠 منوی اصلی', callback_data: 'home' }
   ]);
 
-  await sendTelegram('editMessageText', env.BOT_TOKEN, {
-    chat_id: chatId,
-    message_id: msgId,
+  await editOrReplaceMessage(env.BOT_TOKEN, chatId, msgId, {
     text: `⚡️ <b>لینک‌های مستقیم نیم‌بها:</b>\n🏷 کیفیت: <code>${escapeHTML(selectedQuality || '')}</code>`,
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard }
@@ -372,9 +385,7 @@ async function renderSeasonLinksPage(movieId, verKey, season, chatId, msgId, env
     { text: '🏠 منوی اصلی', callback_data: 'home' }
   ]);
 
-  await sendTelegram('editMessageText', env.BOT_TOKEN, {
-    chat_id: chatId,
-    message_id: msgId,
+  await editOrReplaceMessage(env.BOT_TOKEN, chatId, msgId, {
     text: msg,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
@@ -454,9 +465,7 @@ async function renderSimilarMovies(movieId, chatId, msgId, env) {
 
   keyboard.push([{ text: '🔙 بازگشت به مشخصات', callback_data: `dl_${movieId}` }]);
 
-  await sendTelegram('editMessageText', token, {
-    chat_id: chatId,
-    message_id: msgId,
+  await editOrReplaceMessage(token, chatId, msgId, {
     text: keyboard.length > 1 ? '🔄 <b>عناوین مشابه پیشنهادی:</b>' : '📭 عنوانی مشابه در دیتابیس یافت نشد.',
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard }
@@ -504,9 +513,7 @@ async function renderSearchList(query, page, chatId, msgId, env) {
 
   keyboard.push([{ text: '🏠 منوی اصلی', callback_data: 'home' }]);
 
-  await sendTelegram(msgId ? 'editMessageText' : 'sendMessage', env.BOT_TOKEN, {
-    chat_id: chatId,
-    ...(msgId ? { message_id: msgId } : {}),
+  await editOrReplaceMessage(env.BOT_TOKEN, chatId, msgId, {
     text: `🔎 <b>نتایج جستجو برای:</b> <i>${escapeHTML(query)}</i> (صفحه ${page} از ${totalPages})`,
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: keyboard }
