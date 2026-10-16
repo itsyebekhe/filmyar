@@ -10,6 +10,7 @@
     "db:init:remote": "wrangler d1 execute DB --remote --file=./schema.sql"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241018.0",
     "wrangler": "^3.80.0"
   }
 }
