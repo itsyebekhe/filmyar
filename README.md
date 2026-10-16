@@ -100,11 +100,11 @@ npm run db:init:remote
 ### ۴. اجرای محلی (Local Development)
 فایل `.dev.vars` را در ریشه پروژه بسازید:
 ```ini
-BOT_TOKEN="توکن_ربات_تلگرام"
-TMDB_API_KEY="کلید_tmdb"
-BOT_USERNAME="IrFilmyarBot"
-ADMIN_CHAT_ID="1035839739"
-REQUEST_GROUP_ID="-1003799745191"
+BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
+TMDB_API_KEY="YOUR_TMDB_API_KEY_HERE"
+BOT_USERNAME="YOUR_BOT_USERNAME_WITHOUT_AT"
+ADMIN_CHAT_ID="YOUR_NUMERIC_TELEGRAM_USER_ID"
+REQUEST_GROUP_ID="YOUR_NUMERIC_GROUP_ID"
 ```
 سپس اجرا کنید:
 ```bash
