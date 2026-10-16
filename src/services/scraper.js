@@ -280,10 +280,11 @@ export async function scrapeMovieByImdbId(imdbId, tmdbKey, botUsername) {
   const links = mapFilesToLinks(structuredFiles, f2mDownloads, tmdbData.type, imdbId, botUsername);
 
   return {
-    imdbId,
-    type: tmdbData.type,
-    title_en: tmdbData.title,
-    title_fa: tmdbData.title,
+    imdb_id: imdbId,
+    imdbId: imdbId,
+    type: tmdbData.type || 'movie',
+    title_en: tmdbData.title || '',
+    title_fa: tmdbData.title || '',
     year: tmdbData.year || "2024",
     rating: tmdbData.rating || "0.0",
     links: cleanUpLinksObject(links)

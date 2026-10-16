@@ -109,6 +109,14 @@ export async function dbTrack(db, movieId) {
 }
 
 export async function dbAddCustom(db, payload) {
+  const imdbId = payload.imdb_id || payload.imdbId || null;
+  const type = payload.type || 'movie';
+  const titleEn = payload.title_en || payload.title || 'Unknown';
+  const titleFa = payload.title_fa || titleEn;
+  const year = String(payload.year || '2024');
+  const rating = String(payload.rating || '0.0');
+  const linksJson = JSON.stringify(payload.links || {});
+
   await db.prepare(`
     INSERT INTO custom_media (imdb_id, type, title_en, title_fa, year, rating, links)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -120,8 +128,13 @@ export async function dbAddCustom(db, payload) {
       rating = excluded.rating,
       links = excluded.links
   `).bind(
-    payload.imdb_id, payload.type, payload.title_en, payload.title_fa,
-    payload.year, payload.rating, JSON.stringify(payload.links)
+    imdbId,
+    type,
+    titleEn,
+    titleFa,
+    year,
+    rating,
+    linksJson
   ).run();
   return { success: true };
 }
@@ -148,7 +161,16 @@ export async function getMovieById(db, movieId, env) {
   const scraped = await scrapeMovieByImdbId(movieId, tmdbKey, botName);
   if (scraped) {
     await dbAddCustom(db, scraped);
-    return [scraped.imdbId, scraped.type, scraped.title_en, scraped.title_fa, scraped.year, scraped.rating, row ? row.views : 0, scraped.links];
+    return [
+      scraped.imdb_id || scraped.imdbId,
+      scraped.type,
+      scraped.title_en,
+      scraped.title_fa,
+      scraped.year,
+      scraped.rating,
+      row ? row.views : 0,
+      scraped.links
+    ];
   }
 
   if (row) {
