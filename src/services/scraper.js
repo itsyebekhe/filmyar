@@ -2,15 +2,103 @@ import { BASE_SCRAPER_URL, MAX_CRAWL_FETCHES } from '../config/constants.js';
 import { cleanUpLinksObject, makeSafeParam } from '../utils/helpers.js';
 import { findByImdbId } from './tmdb.js';
 
-function isTitleMatch(t1, t2) {
-  if (!t1 || !t2) return false;
-  const clean = (str) => str.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\b\d{4}\b/g, "").trim().replace(/\s+/g, " ");
-  const c1 = clean(t1);
-  const c2 = clean(t2);
-  if (c1 === c2) return true;
-  const w1 = c1.split(' ');
-  const w2 = c2.split(' ');
-  return w1.length === w2.length && w1.every(w => w2.includes(w));
+function normalizeTitle(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/<[^>]+>/g, '') // Remove HTML tags
+    .replace(/^the\s+|^a\s+|^an\s+/i, '') // Remove leading English articles
+    .replace(/[^a-z0-9\s]/g, ' ') // Strip punctuation
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function parseFilm2MediaEntry(rawTitle, entryHtml) {
+  const cleanText = rawTitle.replace(/<[^>]+>/g, '').trim();
+
+  // 1. Detect Movie vs Series
+  const isSeries = /سریال|مجموعه|فصل/i.test(cleanText);
+
+  // 2. Extract Year from calendar badge or title (19xx or 20xx)
+  const calendarYearMatch = entryHtml.match(/icon-calendar[\s\S]*?<\/svg>\s*(\d{4})/i);
+  const titleYearMatch = cleanText.match(/\b(19\d\d|20\d\d)\b/);
+  const year = calendarYearMatch ? calendarYearMatch[1] : (titleYearMatch ? titleYearMatch[1] : null);
+
+  // 3. Extract purely the English title portion
+  let enTitle = cleanText
+    .replace(/^دانلود\s+(?:فیلم|سریال|انیمیشن|مینی\s*سریال|فیلم\s*سینمایی)\s*/i, '')
+    .replace(/\s*(?:با\s+)?(?:دوبله|زیرنویس|سانسور|فارسی|چسبیده|کامل|بدون\s*سانسور).*$/i, '')
+    .replace(/\b(19\d\d|20\d\d)\b.*$/, '')
+    .trim();
+
+  return {
+    rawTitle: cleanText,
+    enTitle,
+    year,
+    isSeries
+  };
+}
+
+function isStrictMatch(f2mEntry, targetTitle, targetYear, targetType) {
+  // A. Strict Type Match (Movie vs Series)
+  if (targetType === 'movie' && f2mEntry.isSeries) return false;
+  if (targetType === 'series' && !f2mEntry.isSeries) return false;
+
+  // B. Exact Normalized Title Match
+  const normF2M = normalizeTitle(f2mEntry.enTitle);
+  const normTarget = normalizeTitle(targetTitle);
+
+  if (!normF2M || !normTarget) return false;
+  if (normF2M !== normTarget) return false;
+
+  // C. Year Match (Tolerance of ±1 year for global vs domestic release variance)
+  if (targetYear && f2mEntry.year) {
+    const tYr = parseInt(targetYear, 10);
+    const fYr = parseInt(f2mEntry.year, 10);
+    if (!isNaN(tYr) && !isNaN(fYr)) {
+      if (Math.abs(tYr - fYr) > 1) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+async function searchFilm2Media(query) {
+  // Search using exact title to minimize broad fuzzy results
+  const cleanQuery = query.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+  const url = `https://www.f2mc.top/?s=${encodeURIComponent(cleanQuery)}&type=both`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    const entries = [];
+    const entryRegex = /<article class="entry">([\s\S]*?)<\/article>/gi;
+    let match;
+
+    while ((match = entryRegex.exec(html)) !== null) {
+      const entryHtml = match[1];
+      const titleMatch = entryHtml.match(/<h2 class="entry-title">([\s\S]*?)<\/h2>/i);
+      const linkMatch = entryHtml.match(/<a href="([^"]+)"[^>]*class="stretched-link"/i);
+
+      if (titleMatch && linkMatch) {
+        const parsed = parseFilm2MediaEntry(titleMatch[1].trim(), entryHtml);
+        entries.push({
+          ...parsed,
+          link: linkMatch[1]
+        });
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
 }
 
 async function verifyPath(url) {
@@ -61,39 +149,6 @@ async function crawlDirectory(currentUrl, rootUrl, list, state) {
         ...meta
       });
     }
-  }
-}
-
-async function searchFilm2Media(query) {
-  const url = `https://www.f2mc.top/?s=${encodeURIComponent(query)}&type=both`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      }
-    });
-    if (!res.ok) return [];
-    const html = await res.text();
-
-    const entries = [];
-    const entryRegex = /<article class="entry">([\s\S]*?)<\/article>/gi;
-    let match;
-
-    while ((match = entryRegex.exec(html)) !== null) {
-      const entryHtml = match[1];
-      const titleMatch = entryHtml.match(/<h2 class="entry-title">([\s\S]*?)<\/h2>/i);
-      const linkMatch = entryHtml.match(/<a href="([^"]+)"[^>]*class="stretched-link"/i);
-
-      if (titleMatch && linkMatch) {
-        entries.push({
-          title: titleMatch[1].trim(),
-          link: linkMatch[1]
-        });
-      }
-    }
-    return entries;
-  } catch {
-    return [];
   }
 }
 
@@ -179,7 +234,9 @@ export async function scrapeMovieByImdbId(imdbId, tmdbKey, botUsername) {
   if (!tmdbData) return null;
 
   const f2mSearchResults = await searchFilm2Media(tmdbData.title);
-  const f2mMatches = f2mSearchResults.filter(item => isTitleMatch(item.title, tmdbData.title));
+  const f2mMatches = f2mSearchResults.filter(item =>
+    isStrictMatch(item, tmdbData.title, tmdbData.year, tmdbData.type)
+  );
 
   let serverUrl = "";
   let foundOnServer = false;
