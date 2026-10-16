@@ -1,6 +1,6 @@
 import { BASE_SCRAPER_URL, MAX_CRAWL_FETCHES } from '../config/constants.js';
-import { cleanUpLinksObject, makeSafeParam } from '../utils/helpers.js';
 import { findByImdbId } from './tmdb.js';
+import { cleanUpLinksObject, makeSafeParam, isFilenameMatch } from '../utils/helpers.js';
 
 function normalizeTitle(str) {
   if (!str) return '';
@@ -152,7 +152,7 @@ async function crawlDirectory(currentUrl, rootUrl, list, state) {
   }
 }
 
-async function extractF2mDirectLinks(postUrl) {
+async function extractF2mDirectLinks(postUrl, targetTitle, targetYear) {
   const links = [];
   try {
     const res = await fetch(postUrl, {
@@ -176,6 +176,12 @@ async function extractF2mDirectLinks(postUrl) {
         if (!url || !url.startsWith('http') || seen.has(url)) continue;
         seen.add(url);
         const filename = url.substring(url.lastIndexOf('/') + 1);
+
+        // Discard files that do not strictly match the target title/year
+        if (!isFilenameMatch(filename, targetTitle, targetYear)) {
+          continue;
+        }
+
         const meta = extractFileMetadata(filename, url);
         links.push({
           name: decodeURIComponent(filename),
@@ -262,7 +268,7 @@ export async function scrapeMovieByImdbId(imdbId, tmdbKey, botUsername) {
     const allLinks = [];
     for (const match of f2mMatches) {
       if (match.link) {
-        const raw = await extractF2mDirectLinks(match.link);
+        const raw = await extractF2mDirectLinks(match.link, tmdbData.title, tmdbData.year);
         allLinks.push(...raw);
       }
     }

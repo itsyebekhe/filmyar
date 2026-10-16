@@ -1,6 +1,6 @@
-import { cleanUpLinksObject, hasDownloadLinks } from '../utils/helpers.js';
 import { scrapeMovieByImdbId } from '../services/scraper.js';
 import { searchByTitle } from '../services/tmdb.js';
+import { cleanUpLinksObject, hasDownloadLinks, isCachedLinksValid } from '../utils/helpers.js';
 
 export async function ensureTables(db) {
   // Safe runtime execution of core DDL
@@ -132,26 +132,27 @@ export async function getMovieById(db, movieId, env) {
     let parsed = {};
     try { parsed = JSON.parse(row.links); } catch {}
     const cleaned = cleanUpLinksObject(parsed);
-    if (hasDownloadLinks(cleaned)) {
+
+    // Only return cached links if they actually match the title/year and aren't contaminated
+    const isValid = isCachedLinksValid(cleaned, row.title_en || row.title_fa, row.year);
+    if (isValid && hasDownloadLinks(cleaned)) {
       return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleaned];
     }
   }
 
-  // Missing or empty links: scrape live sources
+  // Missing, empty, or contaminated links: re-scrape with strict matcher
   const tmdbKey = env?.TMDB_API_KEY;
   const botName = env?.BOT_USERNAME;
   if (!tmdbKey) return null;
 
   const scraped = await scrapeMovieByImdbId(movieId, tmdbKey, botName);
-  if (scraped && hasDownloadLinks(scraped.links)) {
+  if (scraped) {
     await dbAddCustom(db, scraped);
     return [scraped.imdbId, scraped.type, scraped.title_en, scraped.title_fa, scraped.year, scraped.rating, row ? row.views : 0, scraped.links];
   }
 
   if (row) {
-    let parsed = {};
-    try { parsed = JSON.parse(row.links); } catch {}
-    return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleanUpLinksObject(parsed)];
+    return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, {}];
   }
 
   return null;

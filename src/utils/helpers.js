@@ -53,6 +53,83 @@ export function generateGoogleDorkLinks(titleEn, year) {
   };
 }
 
+export function isFilenameMatch(filename, targetTitle, targetYear) {
+  if (!filename || !targetTitle) return false;
+
+  const cleanFile = decodeURIComponent(filename)
+    .toLowerCase()
+    .replace(/\.[a-z0-9]{3,4}$/i, '')
+    .replace(/[._\-\+]/g, ' ')
+    .trim();
+
+  const cleanTarget = targetTitle.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+  const targetWords = cleanTarget.split(/\s+/).filter(w => w.length > 1 && !['the', 'a', 'an'].includes(w));
+
+  if (targetWords.length === 0) return true;
+
+  const fileWords = cleanFile.split(/\s+/);
+  const allWordsPresent = targetWords.every(tw => fileWords.includes(tw));
+  if (!allWordsPresent) return false;
+
+  // Guard against prefixes (e.g. "Blade Runner" or "Maze Runner" when target is "Runner")
+  const firstTargetWord = targetWords[0];
+  const targetIdx = fileWords.indexOf(firstTargetWord);
+  if (targetIdx > 0) {
+    const priorWord = fileWords[targetIdx - 1];
+    const allowedPrefixes = ['the', 'a', 'an', 'film', 'movie'];
+    if (!allowedPrefixes.includes(priorWord) && !/^\d+$/.test(priorWord)) {
+      return false;
+    }
+  }
+
+  // Guard against year mismatch if both exist
+  if (targetYear) {
+    const fileYearMatch = cleanFile.match(/\b(19\d\d|20\d\d)\b/);
+    if (fileYearMatch) {
+      const fileYr = parseInt(fileYearMatch[1], 10);
+      const targetYr = parseInt(targetYear, 10);
+      if (!isNaN(fileYr) && !isNaN(targetYr)) {
+        if (Math.abs(fileYr - targetYr) > 1) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+export function isCachedLinksValid(links, titleEn, year) {
+  if (!links || typeof links !== 'object') return false;
+  for (const ver in links) {
+    const list = links[ver];
+    if (Array.isArray(list)) {
+      for (const item of list) {
+        if (item.file) {
+          const fname = item.file.substring(item.file.lastIndexOf('/') + 1);
+          if (!isFilenameMatch(fname, titleEn, year)) return false;
+        }
+      }
+    } else if (typeof list === 'object' && list !== null) {
+      for (const s in list) {
+        if (Array.isArray(list[s])) {
+          for (const q of list[s]) {
+            if (q.episodes) {
+              for (const ep of q.episodes) {
+                if (ep.url) {
+                  const fname = ep.url.substring(ep.url.lastIndexOf('/') + 1);
+                  if (!isFilenameMatch(fname, titleEn, year)) return false;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 export function hasDownloadLinks(links) {
   if (!links || typeof links !== 'object') return false;
   let totalLinks = 0;
