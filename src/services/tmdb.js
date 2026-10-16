@@ -3,23 +3,26 @@ import { dbGetByType } from '../db/database.js';
 const imdbIdCache = new Map();
 const tmdbCache = new Map();
 
-export async function fetchImdbMediaList(category, page = 1, db, limit = 12, tmdbKey) {
+export async function fetchImdbMediaList(category, page = 1, db, limit = 12, tmdbKey, genre = '') {
   try {
     let endpoint = '';
     let defaultType = 'movie';
+    const genreParam = genre ? `&with_genres=${genre}` : '';
 
     if (category === 'trending') {
       endpoint = `https://api.themoviedb.org/3/trending/all/week?api_key=${tmdbKey}&page=${page}&language=fa-IR`;
     } else if (category === 'movie') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}&sort_by=popularity.desc&vote_count.gte=150&page=${page}&language=fa-IR`;
+      defaultType = 'movie';
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}&sort_by=popularity.desc&vote_count.gte=100&page=${page}&language=fa-IR${genreParam}`;
     } else if (category === 'series') {
       defaultType = 'series';
-      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${tmdbKey}&sort_by=popularity.desc&vote_count.gte=50&page=${page}&language=fa-IR`;
+      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${tmdbKey}&sort_by=popularity.desc&vote_count.gte=50&page=${page}&language=fa-IR${genreParam}`;
     } else if (category === 'top_movie') {
-      endpoint = `https://api.themoviedb.org/3/movie/top_rated?api_key=${tmdbKey}&page=${page}&language=fa-IR`;
+      defaultType = 'movie';
+      endpoint = `https://api.themoviedb.org/3/movie/top_rated?api_key=${tmdbKey}&page=${page}&language=fa-IR${genreParam}`;
     } else if (category === 'top_series') {
       defaultType = 'series';
-      endpoint = `https://api.themoviedb.org/3/tv/top_rated?api_key=${tmdbKey}&page=${page}&language=fa-IR`;
+      endpoint = `https://api.themoviedb.org/3/tv/top_rated?api_key=${tmdbKey}&page=${page}&language=fa-IR${genreParam}`;
     }
 
     const res = await fetch(endpoint, { headers: { Accept: 'application/json' } });

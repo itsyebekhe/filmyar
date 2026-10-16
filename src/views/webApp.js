@@ -4,7 +4,7 @@ export function renderWebApp(botUsername, tmdbKey) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>فیلمیار | Cinema Mini App</title>
+    <title>فیلمیار | مرجع سینما و سریال</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,12 +48,12 @@ export function renderWebApp(botUsername, tmdbKey) {
       .hide-scroll::-webkit-scrollbar { display: none; }
       .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       .glass-header {
-        background: rgba(13, 13, 18, 0.82);
+        background: rgba(13, 13, 18, 0.85);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
       }
       .glass-nav {
-        background: rgba(15, 15, 22, 0.88);
+        background: rgba(15, 15, 22, 0.90);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -97,7 +97,7 @@ export function renderWebApp(botUsername, tmdbKey) {
         </div>
     </header>
 
-    <!-- Standalone Universal Login Modal -->
+    <!-- Standalone Telegram Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="bg-dark-900 border border-dark-border rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
             <div class="w-14 h-14 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
@@ -105,7 +105,7 @@ export function renderWebApp(botUsername, tmdbKey) {
             </div>
             <div>
                 <h3 class="text-base font-black text-white">ورود سریع با تلگرام</h3>
-                <p class="text-xs text-zinc-400 mt-1 leading-relaxed">روی دکمه زیر بزنید تا ربات تلگرام باز شود و ورود شما به وب‌اپلیکیشن به صورت امن تأیید گردد.</p>
+                <p class="text-xs text-zinc-400 mt-1 leading-relaxed">برای همگام‌سازی تاریخچه و نشان‌شده‌ها، روی دکمه زیر بزنید تا ورود شما از طریق ربات تلگرام تأیید شود.</p>
             </div>
             
             <div class="py-2 space-y-3">
@@ -122,6 +122,23 @@ export function renderWebApp(botUsername, tmdbKey) {
             <button onclick="closeAuthModal()" class="w-full py-2.5 rounded-xl bg-dark-800 border border-dark-border text-xs text-zinc-400 hover:text-white transition-colors">
                 انصراف و ادامه به عنوان مهمان
             </button>
+        </div>
+    </div>
+
+    <!-- In-App Online Video Player Modal -->
+    <div id="player-modal" class="fixed inset-0 z-50 bg-black/95 hidden flex flex-col justify-center backdrop-blur-md">
+        <div class="p-4 flex items-center justify-between border-b border-white/10">
+            <div class="min-w-0 pr-2">
+                <h3 id="player-title" class="text-sm font-black text-white truncate">پخش آنلاین</h3>
+                <span id="player-quality-badge" class="text-[10px] text-zinc-400 font-medium">کیفیت اصلی</span>
+            </div>
+            <button onclick="closeOnlinePlayer()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90">✕</button>
+        </div>
+        <div class="flex-1 flex items-center justify-center bg-black p-2">
+            <video id="app-video-player" controls playsinline preload="metadata" class="w-full max-h-[75vh] rounded-2xl shadow-2xl bg-dark-900"></video>
+        </div>
+        <div class="p-4 text-center">
+            <p class="text-[11px] text-zinc-400 font-medium">💡 در صورت کاهش سرعت، می‌توانید از دکمه دانلود مستقیم استفاده فرمایید.</p>
         </div>
     </div>
 
@@ -199,6 +216,11 @@ export function renderWebApp(botUsername, tmdbKey) {
                 </div>
             </div>
 
+            <!-- Genre Filter Bar (Shown in Movies & Series views) -->
+            <div id="genre-filter-bar" class="hidden">
+                <div id="genre-pills-list" class="flex gap-2 overflow-x-auto hide-scroll pb-1"></div>
+            </div>
+
             <div class="flex items-center justify-between border-b border-dark-border pb-2">
                 <h2 id="grid-title" class="text-sm font-black text-white tracking-wide">عناوین</h2>
                 <span id="grid-count" class="text-[10px] text-zinc-500 font-medium"></span>
@@ -260,19 +282,23 @@ export function renderWebApp(botUsername, tmdbKey) {
                     <div id="modal-meta-badges" class="flex flex-wrap items-center gap-2 mt-2 text-xs text-zinc-400 font-medium"></div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <button onclick="triggerHaptic('medium'); requestInTelegram()" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-98 transition-transform">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
-                        <span>دریافت سریع در تلگرام</span>
+                <!-- Primary Action Buttons -->
+                <div class="flex items-center gap-2.5">
+                    <button onclick="triggerHaptic('medium'); requestInTelegram()" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-98 transition-transform">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                        <span>ارسال در تلگرام</span>
                     </button>
-                    <button id="btn-fav-toggle" onclick="toggleBookmarkModal()" class="w-12 h-12 rounded-2xl bg-dark-800 border border-dark-border flex items-center justify-center text-zinc-400 active:scale-90 transition-transform">
+                    <button onclick="shareMovieDeepLink()" class="p-3 rounded-2xl bg-dark-800 border border-dark-border text-zinc-300 hover:text-white active:scale-90 transition-transform" title="اشتراک‌گذاری">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                    </button>
+                    <button id="btn-fav-toggle" onclick="toggleBookmarkModal()" class="p-3 rounded-2xl bg-dark-800 border border-dark-border flex items-center justify-center text-zinc-400 active:scale-90 transition-transform">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
                     </button>
                 </div>
 
                 <div class="flex border-b border-dark-border gap-6 pt-2">
                     <button id="modal-tab-desc" onclick="switchModalTab('desc')" class="pb-2.5 text-xs font-bold text-brand-500 border-b-2 border-brand-500 transition-colors">داستان و عوامل</button>
-                    <button id="modal-tab-dl" onclick="switchModalTab('dl')" class="pb-2.5 text-xs font-semibold text-zinc-400 transition-colors">📥 لینک‌های مستقیم دانلود</button>
+                    <button id="modal-tab-dl" onclick="switchModalTab('dl')" class="pb-2.5 text-xs font-semibold text-zinc-400 transition-colors">📥 دانلود و پخش آنلاین</button>
                 </div>
 
                 <div id="modal-content-desc" class="space-y-3 pt-1">
@@ -330,9 +356,23 @@ export function renderWebApp(botUsername, tmdbKey) {
         let endReached = false;
         let searchTimer = null;
         let activeQuery = '';
+        let activeGenre = '';
         let heroItem = null;
         let selectedMovie = { id: null, title: '', year: '', rating: '', type: 'movie' };
         let bookmarkedSet = new Set();
+
+        const GENRE_LIST = [
+            { id: '', name: 'همه' },
+            { id: '28', name: '💥 اکشن' },
+            { id: '35', name: '😂 کمدی' },
+            { id: '27', name: '👻 ترسناک' },
+            { id: '878', name: '🚀 علمی‌تخیلی' },
+            { id: '18', name: '🎭 درام' },
+            { id: '16', name: '🎨 انیمیشن' },
+            { id: '80', name: '🕵️ جنایی' },
+            { id: '10749', name: '❤️ عاشقانه' },
+            { id: '12', name: '🗺 ماجراجویی' }
+        ];
 
         let currentUser = null;
         try {
@@ -375,7 +415,7 @@ export function renderWebApp(botUsername, tmdbKey) {
         function handleAuthButtonClick() {
             triggerHaptic('light');
             if (currentUser && !tg?.initData) {
-                if (confirm('آیا می‌خواهید از حساب تلگرام خارج شوید؟')) {
+                if (confirm('آیا می‌خواهید از حساب کاربری خارج شوید؟')) {
                     localStorage.removeItem('filmyar_user');
                     currentUser = null;
                     userId = '';
@@ -457,6 +497,39 @@ export function renderWebApp(botUsername, tmdbKey) {
             }, 2600);
         }
 
+        function renderGenreChips() {
+            const container = document.getElementById('genre-pills-list');
+            const filterBar = document.getElementById('genre-filter-bar');
+
+            if (currentTab === 'movies' || currentTab === 'series') {
+                filterBar.classList.remove('hidden');
+            } else {
+                filterBar.classList.add('hidden');
+                return;
+            }
+
+            container.innerHTML = '';
+            GENRE_LIST.forEach(g => {
+                const btn = document.createElement('button');
+                btn.onclick = () => selectGenreFilter(g.id);
+                btn.className = \`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 \${
+                    g.id === activeGenre
+                        ? 'bg-brand-500 text-white shadow-glow'
+                        : 'bg-dark-800 text-zinc-400 border border-dark-border'
+                }\`;
+                btn.innerText = g.name;
+                container.appendChild(btn);
+            });
+        }
+
+        function selectGenreFilter(genreId) {
+            triggerHaptic('selection');
+            activeGenre = genreId;
+            renderGenreChips();
+            resetGrid();
+            loadGridNextPage();
+        }
+
         function switchView(tab) {
             currentTab = tab;
             document.querySelectorAll('nav button').forEach(b => {
@@ -480,12 +553,14 @@ export function renderWebApp(botUsername, tmdbKey) {
                 document.getElementById('search-container').style.display = 'block';
                 document.getElementById('grid-title').innerText = 'جستجو در آرشیو';
                 document.getElementById('grid-count').innerText = '';
+                renderGenreChips();
                 resetGrid();
                 document.getElementById('searchInput').focus();
             } else {
                 document.getElementById('view-grid').style.display = 'block';
                 const titles = { 'movies': 'فیلم‌های سینمایی', 'series': 'مجموعه‌های تلویزیونی', 'favs': 'لیست علاقه‌مندی‌ها' };
                 document.getElementById('grid-title').innerText = titles[tab] || 'عناوین';
+                renderGenreChips();
                 resetGrid();
                 loadGridNextPage();
             }
@@ -649,6 +724,8 @@ export function renderWebApp(botUsername, tmdbKey) {
             if (currentTab === 'search') {
                 endpoint = 'search';
                 params += \`&q=\${encodeURIComponent(activeQuery)}\`;
+            } else if (currentTab === 'movies' || currentTab === 'series') {
+                if (activeGenre) params += \`&genre=\${activeGenre}\`;
             } else if (currentTab === 'favs') {
                 if (!userId) {
                     isFetching = false;
@@ -698,9 +775,52 @@ export function renderWebApp(botUsername, tmdbKey) {
         }, { rootMargin: '300px' });
         sentinelObserver.observe(document.getElementById('grid-sentinel'));
 
+        function playOnlineVideo(videoUrl, title, quality) {
+            triggerHaptic('medium');
+            const modal = document.getElementById('player-modal');
+            const video = document.getElementById('app-video-player');
+            document.getElementById('player-title').innerText = title;
+            document.getElementById('player-quality-badge').innerText = quality;
+
+            video.src = videoUrl;
+            modal.classList.remove('hidden');
+            video.play().catch(() => {});
+        }
+
+        function closeOnlinePlayer() {
+            triggerHaptic('light');
+            const modal = document.getElementById('player-modal');
+            const video = document.getElementById('app-video-player');
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+            modal.classList.add('hidden');
+        }
+
+        function shareMovieDeepLink() {
+            triggerHaptic('medium');
+            const url = window.location.origin + '/#/' + selectedMovie.id;
+            const title = selectedMovie.title || 'فیلمیار';
+            const shareData = {
+                title: \`فیلمیار | \${title}\`,
+                text: \`مشاهده، پخش آنلاین و دانلود «\${title}» در فیلمیار:\`,
+                url: url
+            };
+
+            if (navigator.share) {
+                navigator.share(shareData).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('لینک مستقیم فیلم کپی شد', '📋');
+                });
+            }
+        }
+
         async function openModal(imdbId, title, year, rating, type) {
             triggerHaptic('light');
             selectedMovie = { id: imdbId, title, year, rating, type };
+
+            history.replaceState(null, '', '#/' + imdbId);
 
             if (userId) {
                 fetch(\`/api/history_add?uid=\${userId}&mid=\${imdbId}\`).catch(() => {});
@@ -752,6 +872,7 @@ export function renderWebApp(botUsername, tmdbKey) {
 
         function closeModal() {
             triggerHaptic('light');
+            history.replaceState(null, '', window.location.pathname);
             const bg = document.getElementById('modal-backdrop-bg');
             const sheet = document.getElementById('bottom-sheet');
             sheet.classList.add('translate-y-full');
@@ -812,8 +933,6 @@ export function renderWebApp(botUsername, tmdbKey) {
         function renderDownloadController(item) {
             const tree = document.getElementById('modal-dl-tree');
             const vContainer = document.getElementById('dl-version-container');
-            const sContainer = document.getElementById('dl-season-container');
-            const qContainer = document.getElementById('dl-quality-container');
 
             if (!item || !item[7] || Object.keys(item[7]).length === 0) {
                 renderEmptyDownloadState(item);
@@ -909,17 +1028,20 @@ export function renderWebApp(botUsername, tmdbKey) {
                         <div class="flex items-center gap-2 text-[10px] text-zinc-400 font-medium">
                             <span>⚖️ حجم: \${q.size || 'نیم‌بها'}</span>
                             <span>•</span>
-                            <span class="text-emerald-400">لینک مستقیم سرور</span>
+                            <span class="text-emerald-400">لینک مستقیم</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <button onclick="copyDlLink('\${q.file}', this)" class="p-2.5 rounded-xl bg-dark-700/80 border border-dark-border text-zinc-300 hover:text-white active:scale-95 transition-all" title="کپی لینک">
+                        <button onclick="playOnlineVideo('\${q.file}', '\${selectedMovie.title}', '\${q.quality}')" class="px-3 py-2 rounded-xl bg-dark-700 hover:bg-dark-600 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all" title="پخش آنلاین">
+                            <span>▶️</span>
+                            <span>پخش</span>
+                        </button>
+                        <a href="\${q.file}" target="_blank" download class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs flex items-center gap-1 shadow-glow active:scale-95 transition-all" title="دانلود مستقیم">
+                            <span>📥</span>
+                        </a>
+                        <button onclick="copyDlLink('\${q.file}', this)" class="p-2 rounded-xl bg-dark-700/80 border border-dark-border text-zinc-400 hover:text-white active:scale-95 transition-all" title="کپی لینک">
                             📋
                         </button>
-                        <a href="\${q.file}" target="_blank" download class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-glow active:scale-95 transition-all">
-                            <span>📥</span>
-                            <span>دانلود</span>
-                        </a>
                     </div>
                 \`;
                 tree.appendChild(card);
@@ -1039,10 +1161,11 @@ export function renderWebApp(botUsername, tmdbKey) {
                         </div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <button onclick="copyDlLink('\${ep.url}', this)" class="p-2 rounded-lg bg-dark-700 text-zinc-300 active:scale-95" title="کپی">📋</button>
+                        <button onclick="playOnlineVideo('\${ep.url}', '\${selectedMovie.title} - قسمت ' + '\${epNum}', 'قسمت ' + '\${epNum}')" class="p-2 rounded-lg bg-dark-700 text-white active:scale-95 text-xs font-bold" title="پخش آنلاین">▶️</button>
                         <a href="\${ep.url}" target="_blank" download class="p-2 rounded-lg bg-brand-500 text-white font-bold active:scale-95 text-xs flex items-center gap-1" title="دانلود">
                             <span>📥</span>
                         </a>
+                        <button onclick="copyDlLink('\${ep.url}', this)" class="p-2 rounded-lg bg-dark-700 text-zinc-400 hover:text-white active:scale-95" title="کپی">📋</button>
                     </div>
                 \`;
                 grid.appendChild(row);
@@ -1140,8 +1263,24 @@ export function renderWebApp(botUsername, tmdbKey) {
             showToast('حافظه کش پاک شد', '🧹');
         }
 
+        async function checkInitialDeepLink() {
+            const hash = window.location.hash || '';
+            const match = hash.match(/#\/?(tt\d+)/i);
+            if (match && match[1]) {
+                const imdbId = match[1];
+                try {
+                    const res = await fetch('/api/get?id=' + imdbId);
+                    const item = await res.json();
+                    if (item && item[0]) {
+                        openModal(item[0], item[3] || item[2], item[4], item[5], item[1]);
+                    }
+                } catch(e) {}
+            }
+        }
+
         renderAuthBadge();
         loadHomeSliders();
+        checkInitialDeepLink();
     </script>
 </body>
 </html>`;

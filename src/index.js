@@ -136,15 +136,17 @@ export default {
           });
         }
 
+        const genre = url.searchParams.get('genre') || '';
+
         if (action === 'movies') {
-          const list = await fetchImdbMediaList('movie', page, env.DB, 12, env.TMDB_API_KEY);
+          const list = await fetchImdbMediaList('movie', page, env.DB, 12, env.TMDB_API_KEY, genre);
           return new Response(JSON.stringify(list), {
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
 
         if (action === 'series') {
-          const list = await fetchImdbMediaList('series', page, env.DB, 12, env.TMDB_API_KEY);
+          const list = await fetchImdbMediaList('series', page, env.DB, 12, env.TMDB_API_KEY, genre);
           return new Response(JSON.stringify(list), {
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
