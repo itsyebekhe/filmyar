@@ -121,9 +121,15 @@ export default {
     if (request.method === 'POST') {
       try {
         const update = await request.json();
-        ctx.waitUntil(handleTelegramUpdate(update, env, ctx));
+        ctx.waitUntil((async () => {
+          try {
+            await handleTelegramUpdate(update, env, ctx);
+          } catch (err) {
+            console.error('Webhook execution failure:', err);
+          }
+        })());
       } catch (err) {
-        console.error('Update error:', err);
+        console.error('Failed to parse incoming webhook payload:', err);
       }
       return new Response('OK', { status: 200 });
     }

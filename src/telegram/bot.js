@@ -22,24 +22,35 @@ import {
 } from '../db/database.js';
 
 export async function handleTelegramUpdate(update, env, ctx) {
-  const token = env.BOT_TOKEN;
-  const db = env.DB;
+  try {
+    const token = env.BOT_TOKEN;
+    const db = env.DB;
 
-  const user = update.message?.from || update.callback_query?.from || update.inline_query?.from;
-  if (user) {
-    ctx.waitUntil(
-      db.prepare(
-        "INSERT INTO users (id, username, first_name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET username=excluded.username, first_name=excluded.first_name"
-      ).bind(user.id, user.username || null, user.first_name || null).run()
-    );
-  }
+    if (!token) {
+      console.error('❌ Cannot process update: BOT_TOKEN is missing in environment variables.');
+      return;
+    }
 
-  if (update.message?.text) {
-    await handleMessage(update.message, env, ctx);
-  } else if (update.callback_query) {
-    await handleCallback(update.callback_query, env, ctx);
-  } else if (update.inline_query) {
-    await handleInlineQuery(update.inline_query, env);
+    const user = update.message?.from || update.callback_query?.from || update.inline_query?.from;
+    if (user && db) {
+      ctx?.waitUntil(
+        db.prepare(
+          "INSERT INTO users (id, username, first_name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET username=excluded.username, first_name=excluded.first_name"
+        ).bind(user.id, user.username || null, user.first_name || null).run().catch(err => {
+          console.error('User sync warning:', err.message);
+        })
+      );
+    }
+
+    if (update.message?.text) {
+      await handleMessage(update.message, env, ctx);
+    } else if (update.callback_query) {
+      await handleCallback(update.callback_query, env, ctx);
+    } else if (update.inline_query) {
+      await handleInlineQuery(update.inline_query, env);
+    }
+  } catch (err) {
+    console.error('❌ Error handling Telegram update:', err.stack || err);
   }
 }
 
