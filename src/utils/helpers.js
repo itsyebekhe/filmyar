@@ -130,6 +130,40 @@ export function isCachedLinksValid(links, titleEn, year) {
   return true;
 }
 
+export async function verifyTelegramAuth(authData, botToken) {
+  if (!authData || !authData.hash || !botToken) return false;
+
+  const { hash, ...data } = authData;
+
+  // Reject replay attacks older than 24 hours
+  const now = Math.floor(Date.now() / 1000);
+  if (data.auth_date && now - Number(data.auth_date) > 86400) {
+    return false;
+  }
+
+  const checkString = Object.keys(data)
+    .sort()
+    .map(key => `${key}=${data[key]}`)
+    .join('\n');
+
+  const encoder = new TextEncoder();
+  const secretKeyHash = await crypto.subtle.digest('SHA-256', encoder.encode(botToken));
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    secretKeyHash,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(checkString));
+  const hexSignature = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return hexSignature.toLowerCase() === hash.toLowerCase();
+}
+
 export function hasDownloadLinks(links) {
   if (!links || typeof links !== 'object') return false;
   let totalLinks = 0;

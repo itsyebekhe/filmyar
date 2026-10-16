@@ -12,6 +12,8 @@ import {
 import { fetchImdbMediaList } from './services/tmdb.js';
 import { handleTelegramUpdate } from './telegram/bot.js';
 import { renderWebApp } from './views/webApp.js';
+import { verifyTelegramAuth } from './utils/helpers.js';
+import { dbUserSync } from './db/database.js';
 
 let tablesInitialized = false;
 
@@ -29,6 +31,34 @@ export default {
       return new Response(renderWebApp(env.BOT_USERNAME, env.TMDB_API_KEY), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
+    }
+
+    // Standalone Telegram Auth Callback (POST)
+    if (request.method === 'POST' && url.pathname === '/api/auth/telegram') {
+      try {
+        const authData = await request.json();
+        const isValid = await verifyTelegramAuth(authData, env.BOT_TOKEN);
+
+        if (!isValid) {
+          return new Response(JSON.stringify({ ok: false, error: 'Invalid authentication signature' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
+        if (env.DB) {
+          await dbUserSync(env.DB, Number(authData.id), authData.username, authData.first_name);
+        }
+
+        return new Response(JSON.stringify({ ok: true, user: authData }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: 'Auth failed' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
     }
 
     // 2. REST API Endpoints for Mini App
@@ -118,7 +148,7 @@ export default {
     }
 
     // 3. Telegram Webhook (POST)
-    if (request.method === 'POST') {
+    if (request.method === 'POST' && url.pathname !== '/api/auth/telegram') {
       try {
         const update = await request.json();
         ctx.waitUntil((async () => {
