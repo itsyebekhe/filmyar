@@ -14,6 +14,7 @@ import { handleTelegramUpdate } from './telegram/bot.js';
 import { renderWebApp } from './views/webApp.js';
 import { verifyTelegramAuth } from './utils/helpers.js';
 import { dbUserSync } from './db/database.js';
+import { dbCreateAuthSession, dbGetAuthSession } from './db/database.js';
 
 let tablesInitialized = false;
 
@@ -30,6 +31,43 @@ export default {
     if (request.method === 'GET' && url.pathname === '/') {
       return new Response(renderWebApp(env.BOT_USERNAME, env.TMDB_API_KEY), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+      });
+    }
+
+    // 1. Standalone Telegram Bot Login Handlers
+    if (request.method === 'POST' && url.pathname === '/api/auth/init') {
+      const sessionId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+      if (env.DB) {
+        await dbCreateAuthSession(env.DB, sessionId);
+      }
+      return new Response(JSON.stringify({
+        ok: true,
+        sessionId,
+        botUrl: `https://t.me/${env.BOT_USERNAME}?start=auth_${sessionId}`
+      }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/auth/check') {
+      const sessionId = url.searchParams.get('id');
+      if (!sessionId || !env.DB) {
+        return new Response(JSON.stringify({ ok: false }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+
+      const session = await dbGetAuthSession(env.DB, sessionId);
+      if (session && session.status === 'approved' && session.user_data) {
+        let user = null;
+        try { user = JSON.parse(session.user_data); } catch {}
+        return new Response(JSON.stringify({ ok: true, approved: true, user }), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, approved: false }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 

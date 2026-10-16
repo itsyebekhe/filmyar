@@ -3,9 +3,9 @@ import { searchByTitle } from '../services/tmdb.js';
 import { cleanUpLinksObject, hasDownloadLinks, isCachedLinksValid } from '../utils/helpers.js';
 
 export async function ensureTables(db) {
-  // Safe runtime execution of core DDL
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS auth_sessions (id TEXT PRIMARY KEY, user_id INTEGER, user_data TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS favorites (user_id INTEGER, movie_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, movie_id))`),
     db.prepare(`CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, movie_id TEXT, viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS channels (username TEXT UNIQUE)`),
@@ -16,6 +16,19 @@ export async function ensureTables(db) {
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_history_user ON history(user_id, viewed_at DESC)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_favs_user ON favorites(user_id)`)
   ]);
+}
+
+export async function dbCreateAuthSession(db, sessionId) {
+  await db.prepare("INSERT INTO auth_sessions (id, status) VALUES (?, 'pending')").bind(sessionId).run();
+}
+
+export async function dbApproveAuthSession(db, sessionId, user) {
+  await db.prepare("UPDATE auth_sessions SET status = 'approved', user_id = ?, user_data = ? WHERE id = ?")
+    .bind(user.id, JSON.stringify(user), sessionId).run();
+}
+
+export async function dbGetAuthSession(db, sessionId) {
+  return await db.prepare("SELECT * FROM auth_sessions WHERE id = ?").bind(sessionId).first();
 }
 
 export async function dbUserSync(db, userId, username, firstName) {

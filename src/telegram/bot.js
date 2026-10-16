@@ -20,6 +20,7 @@ import {
   searchMovies,
   dbGetRandom
 } from '../db/database.js';
+import { dbApproveAuthSession } from '../db/database.js';
 
 export async function handleTelegramUpdate(update, env, ctx) {
   try {
@@ -97,6 +98,21 @@ async function handleMessage(message, env, ctx) {
     const parts = text.split(' ');
     if (parts.length > 1) {
       const payload = parts[1];
+      if (payload.startsWith('auth_')) {
+        const sessionId = payload.replace('auth_', '');
+        await dbApproveAuthSession(db, sessionId, {
+          id: userId,
+          first_name: message.from.first_name || 'کاربر',
+          username: message.from.username || null
+        });
+
+        const successMsg = `✅ <b>ورود شما به وب‌اپلیکیشن فیلمیار با موفقیت تأیید شد!</b>\n━━━━━━━━━━━━━━━━━━━━\nاکنون می‌توانید به مرورگر خود بازگردید و از تمام امکانات استفاده کنید.`;
+        return sendTelegram('sendMessage', token, {
+          chat_id: chatId,
+          text: successMsg,
+          parse_mode: 'HTML'
+        });
+      }
       if (payload.startsWith('tt')) {
         return renderMovieCard(payload, chatId, null, env, ctx);
       }

@@ -110,18 +110,27 @@ export function renderWebApp(botUsername, tmdbKey) {
         </div>
     </header>
 
-    <!-- Standalone Login Modal -->
+    <!-- Standalone Universal Login Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="bg-dark-900 border border-dark-border rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
-            <div class="w-14 h-14 bg-brand-500/10 text-brand-500 border border-brand-500/20 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
-                🎬
+            <div class="w-14 h-14 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                ✈️
             </div>
             <div>
-                <h3 class="text-base font-black text-white">ورود با حساب تلگرام</h3>
-                <p class="text-xs text-zinc-400 mt-1 leading-relaxed">برای همگام‌سازی لیست علاقه‌مندی‌ها و تاریخچه تماشا، با حساب تلگرام خود وارد شوید.</p>
+                <h3 class="text-base font-black text-white">ورود سریع با تلگرام</h3>
+                <p class="text-xs text-zinc-400 mt-1 leading-relaxed">روی دکمه زیر بزنید تا ربات تلگرام باز شود و ورود شما به وب‌اپلیکیشن به صورت امن تأیید گردد.</p>
             </div>
             
-            <div id="tg-login-widget-box" class="py-2 flex justify-center min-h-[44px]"></div>
+            <div class="py-2 space-y-3">
+                <a id="btn-tg-direct-link" href="#" target="_blank" class="w-full py-3.5 px-4 rounded-2xl bg-[#229ED9] hover:bg-[#1E88E5] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all">
+                    <span>🚀</span>
+                    <span>ورود مستقیم از طریق ربات تلگرام</span>
+                </a>
+                <div id="auth-polling-status" class="hidden flex items-center justify-center gap-2 text-[11px] text-zinc-400">
+                    <div class="w-3.5 h-3.5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>در انتظار تأیید شما در تلگرام...</span>
+                </div>
+            </div>
 
             <button onclick="closeAuthModal()" class="w-full py-2.5 rounded-xl bg-dark-800 border border-dark-border text-xs text-zinc-400 hover:text-white transition-colors">
                 انصراف و ادامه به عنوان مهمان
@@ -380,51 +389,53 @@ export function renderWebApp(botUsername, tmdbKey) {
             }
         }
 
-        function openAuthModal() {
+        let authPollTimer = null;
+
+        async function openAuthModal() {
             const modal = document.getElementById('auth-modal');
-            const widgetBox = document.getElementById('tg-login-widget-box');
+            const directBtn = document.getElementById('btn-tg-direct-link');
+            const pollStatus = document.getElementById('auth-polling-status');
             modal.classList.remove('hidden');
 
-            if (!widgetBox.hasChildNodes()) {
-                const script = document.createElement('script');
-                script.async = true;
-                script.src = 'https://telegram.org/js/telegram-widget.js?22';
-                script.setAttribute('data-telegram-login', botName);
-                script.setAttribute('data-size', 'large');
-                script.setAttribute('data-radius', '12');
-                script.setAttribute('data-onauth', 'onTelegramWidgetAuth(user)');
-                script.setAttribute('data-request-access', 'write');
-                widgetBox.appendChild(script);
+            try {
+                const res = await fetch('/api/auth/init', { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    directBtn.href = data.botUrl;
+                    directBtn.onclick = () => {
+                        pollStatus.classList.remove('hidden');
+                        startAuthPolling(data.sessionId);
+                    };
+                }
+            } catch(e) {
+                showToast('خطا در شروع اتصال به ربات', '❌');
             }
         }
 
         function closeAuthModal() {
             document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-polling-status').classList.add('hidden');
+            clearInterval(authPollTimer);
         }
 
-        async function onTelegramWidgetAuth(user) {
-            try {
-                const res = await fetch('/api/auth/telegram', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(user)
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    currentUser = user;
-                    userId = user.id;
-                    localStorage.setItem('filmyar_user', JSON.stringify(user));
-                    renderAuthBadge();
-                    closeAuthModal();
-                    showToast(\`خوش آمدید، \${user.first_name}!\`, '🎉');
-                } else {
-                    showToast('خطا در اعتبارسنجی حساب', '❌');
-                }
-            } catch(e) {
-                showToast('خطا در برقراری ارتباط با سرور', '❌');
-            }
+        function startAuthPolling(sessionId) {
+            clearInterval(authPollTimer);
+            authPollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(\`/api/auth/check?id=\${sessionId}\`);
+                    const data = await res.json();
+                    if (data.ok && data.approved && data.user) {
+                        clearInterval(authPollTimer);
+                        currentUser = data.user;
+                        userId = data.user.id;
+                        localStorage.setItem('filmyar_user', JSON.stringify(data.user));
+                        renderAuthBadge();
+                        closeAuthModal();
+                        showToast(\`خوش آمدید، \${data.user.first_name}!\`, '🎉');
+                    }
+                } catch(e) {}
+            }, 1800);
         }
-        window.onTelegramWidgetAuth = onTelegramWidgetAuth;
 
         renderAuthBadge();
 
