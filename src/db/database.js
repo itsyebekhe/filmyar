@@ -238,3 +238,25 @@ export async function dbGetRandom(db) {
   }
   return null;
 }
+
+export async function dbGetByType(db, type, page = 1, limit = 12) {
+  try {
+    const offset = (page - 1) * limit;
+    const { results } = await db.prepare(
+      "SELECT * FROM custom_media WHERE type = ? AND links IS NOT NULL AND links != '{}' ORDER BY views DESC, CAST(rating AS REAL) DESC LIMIT ? OFFSET ?"
+    ).bind(type, limit, offset).all();
+
+    if (!results || results.length === 0) return [];
+
+    return results
+      .map(row => {
+        let parsed = {};
+        try { parsed = JSON.parse(row.links); } catch {}
+        const cleaned = cleanUpLinksObject(parsed);
+        return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleaned];
+      })
+      .filter(item => hasDownloadLinks(item[7]));
+  } catch {
+    return [];
+  }
+}

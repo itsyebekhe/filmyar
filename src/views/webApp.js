@@ -672,7 +672,26 @@ export function renderWebApp(botUsername, tmdbKey) {
             if (currentTab === 'search') {
                 endpoint = 'search';
                 params += \`&q=\${encodeURIComponent(activeQuery)}\`;
+            if (currentTab === 'search') {
+                endpoint = 'search';
+                params += \`&q=\${encodeURIComponent(activeQuery)}\`;
             } else if (currentTab === 'favs') {
+                if (!userId) {
+                    isFetching = false;
+                    loader.style.display = 'none';
+                    document.getElementById('grid-container').innerHTML = \`
+                        <div class="col-span-full text-center py-12 space-y-3">
+                            <div class="text-3xl">📌</div>
+                            <h3 class="text-xs font-bold text-white">لیست علاقه‌مندی‌ها</h3>
+                            <p class="text-[11px] text-zinc-400">برای مشاهده و مدیریت فیلم‌های نشان‌شده وارد شوید.</p>
+                            <button onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-glow">
+                                <span>🚀</span>
+                                <span>ورود با تلگرام</span>
+                            </button>
+                        </div>
+                    \`;
+                    return;
+                }
                 params += \`&uid=\${userId}\`;
             }
 
@@ -708,6 +727,11 @@ export function renderWebApp(botUsername, tmdbKey) {
         async function openModal(imdbId, title, year, rating, type) {
             triggerHaptic('light');
             selectedMovie = { id: imdbId, title, year, rating, type };
+
+            // Record history only if user is logged in (guests can browse & download freely)
+            if (userId) {
+                fetch(\`/api/history_add?uid=\${userId}&mid=\${imdbId}\`).catch(() => {});
+            }
 
             const bg = document.getElementById('modal-backdrop-bg');
             const sheet = document.getElementById('bottom-sheet');

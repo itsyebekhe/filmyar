@@ -136,6 +136,28 @@ export default {
           });
         }
 
+        if (action === 'movies') {
+          const list = await fetchImdbMediaList('movie', page, env.DB, 12, env.TMDB_API_KEY);
+          return new Response(JSON.stringify(list), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
+        if (action === 'series') {
+          const list = await fetchImdbMediaList('series', page, env.DB, 12, env.TMDB_API_KEY);
+          return new Response(JSON.stringify(list), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
+        if (action === 'top') {
+          const type = url.searchParams.get('type') || 'movie';
+          const list = await fetchImdbMediaList(type === 'series' ? 'top_series' : 'top_movie', page, env.DB, 12, env.TMDB_API_KEY);
+          return new Response(JSON.stringify(list), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+
         if (action === 'fav_toggle') {
           const mid = url.searchParams.get('mid');
           const res = await dbFavToggle(env.DB, uid, mid);

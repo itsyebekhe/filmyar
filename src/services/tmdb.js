@@ -1,3 +1,5 @@
+import { dbGetByType } from '../db/database.js';
+
 const imdbIdCache = new Map();
 const tmdbCache = new Map();
 
@@ -81,6 +83,9 @@ export async function fetchImdbMediaList(category, page = 1, db, limit = 12, tmd
     if (filtered.length > 0) return filtered;
     throw new Error('No items resolved');
   } catch (err) {
+    if (db && (category === 'movie' || category === 'series')) {
+      return await dbGetByType(db, category, page, limit);
+    }
     return [];
   }
 }
