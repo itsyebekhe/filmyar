@@ -41,19 +41,10 @@ export async function fetchImdbMediaList(category, page = 1, db, limit = 12, tmd
           const year = (item.release_date || item.first_air_date || '2024').substring(0, 4);
           const rating = item.vote_average ? Number(item.vote_average).toFixed(1) : '7.0';
 
+          // 1. Check in-memory cache
           let imdbId = imdbIdCache.get(`${mediaType}_${tmdbId}`);
 
-          let localRow = null;
-          if (db) {
-            localRow = await db.prepare(
-              "SELECT * FROM custom_media WHERE title_en = ? OR title_fa = ? LIMIT 1"
-            ).bind(titleEn, titleFa).first();
-            if (localRow?.imdb_id) {
-              imdbId = localRow.imdb_id;
-              imdbIdCache.set(`${mediaType}_${tmdbId}`, imdbId);
-            }
-          }
-
+          // 2. Fast TMDb external_ids lookup (0 D1 reads)
           if (!imdbId) {
             const extUrl = `https://api.themoviedb.org/3/${mediaType === 'series' ? 'tv' : 'movie'}/${tmdbId}/external_ids?api_key=${tmdbKey}`;
             const extRes = await fetch(extUrl);
@@ -68,14 +59,7 @@ export async function fetchImdbMediaList(category, page = 1, db, limit = 12, tmd
 
           if (!imdbId) return null;
 
-          let links = {};
-          let views = 0;
-          if (localRow) {
-            views = localRow.views || 0;
-            try { links = JSON.parse(localRow.links || '{}'); } catch {}
-          }
-
-          return [imdbId, mediaType, titleEn, titleFa, year, rating, views, links];
+          return [imdbId, mediaType, titleEn, titleFa, year, rating, 0, {}];
         } catch {
           return null;
         }

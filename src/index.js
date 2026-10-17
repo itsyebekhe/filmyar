@@ -16,16 +16,9 @@ import { verifyTelegramAuth } from './utils/helpers.js';
 import { dbUserSync } from './db/database.js';
 import { dbCreateAuthSession, dbGetAuthSession } from './db/database.js';
 
-let tablesInitialized = false;
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
-    if (!tablesInitialized) {
-      await ensureTables(env.DB);
-      tablesInitialized = true;
-    }
 
     // 1. Mini App HTML
     if (request.method === 'GET' && url.pathname === '/') {
@@ -111,7 +104,11 @@ export default {
         if (action === 'random') {
           const rnd = await dbGetRandom(env.DB);
           return new Response(JSON.stringify(rnd ? [rnd] : []), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=60, s-maxage=180'
+            }
           });
         }
 
@@ -132,7 +129,11 @@ export default {
         if (action === 'trending') {
           const list = await fetchImdbMediaList('trending', page, env.DB, 12, env.TMDB_API_KEY);
           return new Response(JSON.stringify(list), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=180, s-maxage=600'
+            }
           });
         }
 
@@ -141,14 +142,22 @@ export default {
         if (action === 'movies') {
           const list = await fetchImdbMediaList('movie', page, env.DB, 12, env.TMDB_API_KEY, genre);
           return new Response(JSON.stringify(list), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=180, s-maxage=600'
+            }
           });
         }
 
         if (action === 'series') {
           const list = await fetchImdbMediaList('series', page, env.DB, 12, env.TMDB_API_KEY, genre);
           return new Response(JSON.stringify(list), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=180, s-maxage=600'
+            }
           });
         }
 

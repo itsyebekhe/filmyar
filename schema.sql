@@ -44,5 +44,7 @@ CREATE TABLE IF NOT EXISTS custom_media (
 
 CREATE INDEX IF NOT EXISTS idx_media_type_views ON custom_media(type, views DESC);
 CREATE INDEX IF NOT EXISTS idx_media_rating ON custom_media(rating DESC);
+CREATE INDEX IF NOT EXISTS idx_media_title_en ON custom_media(title_en);
+CREATE INDEX IF NOT EXISTS idx_media_title_fa ON custom_media(title_fa);
 CREATE INDEX IF NOT EXISTS idx_history_user ON history(user_id, viewed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_favs_user ON favorites(user_id);

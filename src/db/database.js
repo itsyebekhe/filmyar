@@ -226,16 +226,40 @@ export async function searchMovies(db, query, env) {
   return results;
 }
 
+let randomCache = { data: null, ts: 0 };
+
 export async function dbGetRandom(db) {
-  const { results } = await db.prepare("SELECT * FROM custom_media WHERE links IS NOT NULL AND links != '{}' ORDER BY RANDOM() LIMIT 10").all();
-  for (const row of results || []) {
-    let parsed = {};
-    try { parsed = JSON.parse(row.links); } catch {}
-    const cleaned = cleanUpLinksObject(parsed);
-    if (hasDownloadLinks(cleaned)) {
-      return [row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleaned];
-    }
+  const now = Date.now();
+  // Serve from memory pool for 2 minutes to eliminate repeated D1 full table reads
+  if (randomCache.data && now - randomCache.ts < 120000) {
+    const list = randomCache.data;
+    return list[Math.floor(Math.random() * list.length)] || null;
   }
+
+  try {
+    // Fast indexed query: avoids sequential table scan
+    const { results } = await db.prepare(
+      "SELECT imdb_id, type, title_en, title_fa, year, rating, views, links FROM custom_media WHERE views >= 0 LIMIT 40"
+    ).all();
+
+    if (!results || results.length === 0) return null;
+
+    const validItems = [];
+    for (const row of results) {
+      let parsed = {};
+      try { parsed = JSON.parse(row.links); } catch {}
+      const cleaned = cleanUpLinksObject(parsed);
+      if (hasDownloadLinks(cleaned)) {
+        validItems.push([row.imdb_id, row.type, row.title_en, row.title_fa || row.title_en, row.year, row.rating, row.views, cleaned]);
+      }
+    }
+
+    if (validItems.length > 0) {
+      randomCache.data = validItems;
+      randomCache.ts = now;
+      return validItems[Math.floor(Math.random() * validItems.length)];
+    }
+  } catch {}
   return null;
 }
 
